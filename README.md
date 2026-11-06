@@ -1,14 +1,16 @@
 # AdaSplat
 
-Content-adaptive image representation with learnable generalized ℓp primitives, adaptive population growth, and post-training compression.
+Training, compression and reconstruction code for AdaSplat.
 
-[中文说明](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [Training](docs/TRAINING.md) · [Codec](docs/CODEC.md) · [Method](docs/ALGORITHM.md)
+[中文说明](README.zh-CN.md)
 
-## Installation
+## Install
 
-Requirements: Python 3.8, PyTorch 2.4.1, a CUDA GPU, a matching CUDA toolkit and C++ compiler.
+Requirements: Python 3.8, a CUDA GPU, CUDA toolkit 11.8, and a compatible C++ compiler. On Windows, run the build from an MSVC developer shell.
 
 ```bash
+git clone https://github.com/bobovici/AdaSplat.git
+cd AdaSplat
 conda create -n adasplat python=3.8.20 -y
 conda activate adasplat
 python -m pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cu118
@@ -17,46 +19,62 @@ python -m pip install -e . --no-deps --no-build-isolation
 python tools/build_renderer.py --jobs 2
 ```
 
-The CUDA extension is built locally. See [installation](docs/INSTALL.md) for Linux and Windows toolchain details.
+To inspect the environment or check the build prerequisites:
 
-## Training
+```bash
+python tools/check_env.py
+python tools/build_renderer.py --check
+```
+
+## Train
+
+Provide your own images. Both image dimensions must exceed 160 pixels. Use a new output directory for each run.
 
 Single image:
 
 ```bash
-python train.py \
+python -u train.py \
   --config configs/default.json \
   --input /path/to/image.png \
   --output runs/single \
   --gpu 0
 ```
 
-Multiple images:
+Image directory:
 
 ```bash
-python train_batch.py \
+python -u train_batch.py \
   --config configs/default.json \
   --input-dir /path/to/images --recursive \
   --output runs/batch \
   --gpus 0,1 --jobs-per-gpu 2
 ```
 
-The default configuration sets a 200,000-primitive upper bound and 50,000 main steps. CLI overrides include `--num`, `--density`, `--steps`, `--initial-ratio` and `--save-counts`. Use `configs/density.json` for a resolution-dependent capacity budget. `--dry-run` prints the resolved plan; `--smoke` runs a small integration profile.
+For one GPU, use `--gpus 0`. `--jobs-per-gpu` sets concurrent image tasks on each GPU.
 
-Each image is optimized independently. Outputs include reconstructions, checkpoints, resume state, progress and complete console/event logs. See [training options and outputs](docs/TRAINING.md).
+The default config uses `--num 200000`, `--steps 50000` and `--initial-ratio 0.15`. Override these on the command line as needed. If lowering `--num`, also lower `--save-counts` so no requested snapshot exceeds the budget. `configs/density.json` is available for density-based budgets.
 
-## Encoding and decoding
+Use `--dry-run` to inspect the plan without training, or `--smoke` for a short cropped integration run. Check `progress.json` and `console.log` in the output directory for progress. The output also includes reconstruction PNGs, inference checkpoints, count snapshots and `resume.pt`.
 
-Encode a trained checkpoint:
+To resume, keep the original input and configuration, pass `--resume /path/to/resume.pt`, and choose a new `--output` directory.
+
+## Encode
+
+After training a single image:
 
 ```bash
 python codec.py encode \
   --checkpoint runs/single/final.pt \
   --target /path/to/image.png \
-  --output runs/single/model.adagc
+  --output runs/single/model.adagc \
+  --decoded-output runs/single/decoded.png
 ```
 
-Decode physical parameters on CPU:
+Use the same input image as `--target`. This command requires the compiled CUDA renderer. It writes the stream, decoded image and a JSON report containing the actual file size and bpp.
+
+## Decode and render
+
+CPU-only parameter decoding:
 
 ```bash
 python codec.py decode \
@@ -64,17 +82,17 @@ python codec.py decode \
   --output runs/single/fields.npz
 ```
 
-Render directly from a complete stream:
+Render an image from the stream:
 
 ```bash
 python render.py \
   --input runs/single/model.adagc \
-  --output runs/single/decoded.png
+  --output runs/single/replayed.png
 ```
 
-Encoding does not retrain or prune the representation. The complete stream contains the coded parameters and decoder metadata; decoding requires neither the source image nor a training checkpoint. GPU rasterization requires the compiled extension. See [codec settings and format](docs/CODEC.md).
+Rendering requires CUDA. Choose new output filenames. To replay a checkpoint produced with a different renderer build, explicitly add `--allow-renderer-change`.
 
-## Evaluation
+## Evaluate
 
 ```bash
 python tools/evaluate.py \
@@ -83,19 +101,14 @@ python tools/evaluate.py \
   --device cuda
 ```
 
-This computes full-resolution RGB8 PSNR, SSIM and MS-SSIM. Actual stream rate is `8 × file_bytes / (height × width)`.
+## More options
 
-## Project structure
-
-```text
-configs/                 training configurations
-src/adasplat/core/       primitive model, optimizer, growth and CUDA sources
-src/adasplat/training/   training, scheduling, logging and checkpoints
-src/adasplat/codec/      encoder, decoder and entropy-coding dependencies
-tools/                   build and evaluation utilities
-examples/                command-line launch examples
-tests/                   automated source-level tests
-docs/                    usage and method documentation
+```bash
+python train.py --help
+python train_batch.py --help
+python codec.py --help
+python codec.py encode --help
+python render.py --help
 ```
 
 ## Tests
