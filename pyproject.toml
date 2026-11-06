@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68,<76", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adasplat"
+version = "2.0.0"
+description = "Adaptive generalized-lp image primitives with validated population growth and post-training coding"
+readme = "README.md"
+requires-python = ">=3.8,<3.12"
+license = {file = "LICENSE"}
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+codec = ["constriction==0.4.1"]
+test = ["pytest==7.1.2", "jsonschema==4.23.0", "constriction==0.4.1"]
+
+[project.scripts]
+adasplat-train = "adasplat.training.cli:single_main"
+adasplat-train-batch = "adasplat.training.cli:batch_main"
+adasplat-codec = "adasplat.codec.cli:main"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["adasplat*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"adasplat.codec._upstream" = ["LICENSE.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["cuda: requires a built CUDA renderer"]

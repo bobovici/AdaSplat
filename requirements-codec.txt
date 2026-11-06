@@ -1,0 +1,2 @@
+# Install requirements.txt and a matching CUDA PyTorch build first.
+constriction==0.4.1

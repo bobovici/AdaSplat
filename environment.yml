@@ -1,0 +1,12 @@
+name: adasplat
+channels:
+  - defaults
+dependencies:
+  - python=3.8.20
+  - pip=24.2
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu118
+      - torch==2.4.1+cu118
+      - -r requirements.txt
+      - -r requirements-codec.txt
+      - -r requirements-build.txt

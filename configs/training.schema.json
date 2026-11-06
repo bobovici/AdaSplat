@@ -1,0 +1,434 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "default": "adasplat_training_v1",
+      "const": "adasplat_training_v1"
+    },
+    "input": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "output": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "total_steps": {
+      "type": "integer",
+      "default": 40000,
+      "minimum": 2
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "default": "density",
+          "enum": [
+            "density",
+            "count"
+          ]
+        },
+        "density": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 2,
+          "maximum": 200000
+        },
+        "initial_ratio": {
+          "type": "number",
+          "default": 0.28601604301413147,
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "mode",
+            "density"
+          ],
+          "properties": {
+            "mode": {
+              "const": "density"
+            },
+            "density": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "count": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "required": [
+            "mode",
+            "count"
+          ],
+          "properties": {
+            "mode": {
+              "const": "count"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 200000
+            },
+            "density": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "growth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "fraction": {
+          "type": "number",
+          "default": 0.8,
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "events": {
+          "type": "integer",
+          "default": 16,
+          "minimum": 1
+        },
+        "min_birth_ratio": {
+          "type": "number",
+          "default": 0.02,
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "max_birth_ratio": {
+          "type": "number",
+          "default": 0.08,
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "early_stop": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "patience": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1
+        },
+        "min_psnr_gain": {
+          "type": "number",
+          "default": 0.01,
+          "exclusiveMinimum": 0
+        },
+        "min_ssim_gain": {
+          "type": "number",
+          "default": 0.0005,
+          "exclusiveMinimum": 0
+        },
+        "eval_interval": {
+          "type": "integer",
+          "default": 500,
+          "minimum": 1
+        },
+        "min_fixed_steps": {
+          "type": "integer",
+          "default": 2000,
+          "minimum": 0
+        }
+      }
+    },
+    "seed": {
+      "type": "integer",
+      "default": 20261002,
+      "minimum": 0,
+      "maximum": 4294967295
+    },
+    "advanced": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mse_fraction": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ssim_ramp_fraction": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ssim_weight": {
+          "type": "number",
+          "default": 0.035,
+          "minimum": 0
+        },
+        "ssim_interval": {
+          "type": "integer",
+          "default": 8,
+          "minimum": 1
+        },
+        "evaluate_every": {
+          "type": "integer",
+          "default": 1000,
+          "minimum": 1
+        },
+        "initial_cg": {
+          "type": "integer",
+          "default": 64,
+          "minimum": 1
+        },
+        "new_color_cg": {
+          "type": "integer",
+          "default": 16,
+          "minimum": 1
+        },
+        "warm_min": {
+          "type": "integer",
+          "default": 64,
+          "minimum": 1
+        },
+        "warm_max": {
+          "type": "integer",
+          "default": 192,
+          "minimum": 1
+        },
+        "joint_steps": {
+          "type": "integer",
+          "default": 256,
+          "minimum": 1
+        },
+        "threads": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1
+        },
+        "ssim_tile": {
+          "type": "integer",
+          "default": 1024,
+          "minimum": 1
+        },
+        "dark_leak_weight": {
+          "type": "number",
+          "default": 2.0,
+          "minimum": 0
+        },
+        "dark_threshold": {
+          "type": "number",
+          "default": 0.05,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "dark_margin": {
+          "type": "number",
+          "default": 0.04,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "dark_grid": {
+          "type": "integer",
+          "default": 4,
+          "minimum": 1
+        },
+        "regularizer_weight": {
+          "type": "number",
+          "default": 0.01,
+          "minimum": 0
+        },
+        "growth_reference": {
+          "type": "string",
+          "default": "pre_birth",
+          "enum": [
+            "pre_birth",
+            "continued_fit"
+          ]
+        },
+        "checkpoint_selection": {
+          "type": "string",
+          "default": "within_cap",
+          "enum": [
+            "within_cap",
+            "same_count"
+          ]
+        },
+        "optimizer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rates": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "xys": {
+                  "type": "number",
+                  "default": 0.03,
+                  "exclusiveMinimum": 0
+                },
+                "scale_raw": {
+                  "type": "number",
+                  "default": 0.01,
+                  "exclusiveMinimum": 0
+                },
+                "rotation_angle": {
+                  "type": "number",
+                  "default": 0.003,
+                  "exclusiveMinimum": 0
+                },
+                "colors": {
+                  "type": "number",
+                  "default": 0.025,
+                  "exclusiveMinimum": 0
+                },
+                "p": {
+                  "type": "number",
+                  "default": 0.003,
+                  "exclusiveMinimum": 0
+                }
+              }
+            },
+            "betas": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 1
+              },
+              "default": [
+                0.98,
+                0.92,
+                0.99
+              ],
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "eps": {
+              "type": "number",
+              "default": 1e-08,
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "moment_correction": {
+              "type": "boolean",
+              "default": false
+            },
+            "pixel_samples": {
+              "type": "integer",
+              "default": 1,
+              "enum": [
+                1,
+                2,
+                4
+              ]
+            },
+            "affine_color": {
+              "type": "boolean",
+              "default": false
+            },
+            "structure_birth": {
+              "type": "boolean",
+              "default": false
+            },
+            "shape_competition": {
+              "type": "boolean",
+              "default": true
+            },
+            "tangent_novelty": {
+              "type": "boolean",
+              "default": false
+            },
+            "sensitivity_trust": {
+              "type": "boolean",
+              "default": false
+            },
+            "split_merge": {
+              "type": "boolean",
+              "default": false,
+              "const": false
+            },
+            "adaptive_maturity": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "renderer_sha256": {
+          "type": "string",
+          "default": "ce330e8acf9f6026871888d7f22c412d52bb6816d1f999c7f914153a56eb5201",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "preprocess": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "smoke_crop": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "snapshots": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "counts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 200000
+          },
+          "default": []
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.1
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:adasplat:training:v1",
+  "title": "AdaSplat shared single/batch training configuration"
+}

@@ -1,0 +1,10 @@
+# Direct dependencies for the frozen recipe. Install matching CUDA torch first.
+torch==2.4.1
+numpy==1.24.4
+scipy==1.10.1
+Pillow==10.4.0
+pytorch-msssim==1.0.0
+matplotlib==3.7.3
+jaxtyping==0.2.19
+rich==13.9.4
+PyYAML==6.0.2

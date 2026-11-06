@@ -1,0 +1,7 @@
+# Preserve exact bytes of checksum-pinned CUDA and entropy-coder sources.
+* -text
+*.png binary
+*.pdf binary
+*.npz binary
+*.pt binary
+*.pyd binary

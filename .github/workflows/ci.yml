@@ -1,0 +1,29 @@
+name: Source and CPU checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cpu:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+          cache: pip
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-dev.txt -r requirements-codec.txt
+          python -m pip install "setuptools>=68,<76" wheel
+          python -m pip install -e . --no-deps --no-build-isolation
+      - name: Check CPU control logic and codec round trips
+        run: python -m pytest -q tests
