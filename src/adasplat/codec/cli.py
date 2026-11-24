@@ -12,7 +12,7 @@ def main(argv=None):
     enc.add_argument('--max-loss-db',type=float,default=.02)
     enc.add_argument('--no-quality-guard',action='store_true',help='Fixed first setting; does not promise decoded quality')
     enc.add_argument('--threads',type=int,default=2)
-    enc.add_argument('--gpu',type=int,default=0)
+    enc.add_argument('--gpu',type=int,default=None)
     enc.add_argument('--renderer',type=Path)
     enc.add_argument('--allow-renderer-change',action='store_true')
     enc.add_argument('--decoded-output',type=Path)
@@ -23,10 +23,10 @@ def main(argv=None):
     ren=subs.add_parser('render',help='Render a .adagc stream or an inference .pt checkpoint')
     ren.add_argument('--input',required=True,type=Path);ren.add_argument('--output',required=True,type=Path)
     ren.add_argument('--renderer',type=Path);ren.add_argument('--allow-renderer-change',action='store_true')
-    ren.add_argument('--gpu',type=int,default=0)
+    ren.add_argument('--gpu',type=int,default=None)
     args=parser.parse_args(argv)
     try:
-        if hasattr(args,'gpu'):
+        if getattr(args,'gpu',None) is not None:
             if args.gpu<0:raise ValueError('gpu must be nonnegative')
             os.environ['CUDA_VISIBLE_DEVICES']=str(args.gpu)
         if hasattr(args,'output') and args.output.exists():raise FileExistsError('Choose a new output file: '+str(args.output))

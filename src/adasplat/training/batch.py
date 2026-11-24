@@ -84,7 +84,7 @@ def _run_batch(images,input_root,config,output,gpus,retries,popen,jobs_per_gpu,l
               'actual_final_density','primitives_per_megapixel','PSNR','SSIM','MS_SSIM',
               'delta_PSNR_vs_fixed_p2','delta_SSIM_vs_fixed_p2','delta_MS_SSIM_vs_fixed_p2',
               'delta_N_vs_fixed_p2','metric_profile',
-              'terminal_step','selected_checkpoint_step','elapsed_seconds','output','error']
+              'terminal_step','selected_checkpoint_step','elapsed_seconds','encoding_status','encoded_bytes','encoded_bpp','decoded_RGB8_PSNR','codec_seconds','output','error']
 
     def persist(phase='training'):
         rows = []
@@ -92,6 +92,8 @@ def _run_batch(images,input_root,config,output,gpus,retries,popen,jobs_per_gpu,l
             summary = job.get('summary',{})
             metric = summary.get('metrics',{})
             delta = summary.get('delta_vs_fixed_p2') or {}
+            enc = summary.get('encoding',{})
+            artifact = (enc.get('artifacts') or [{}])[0]
             rows.append(dict(input=job['input'],status=job['status'],gpu=job.get('gpu'),
                 gpu_slot=job.get('gpu_slot'),attempts=len(job['attempts']),requested_cap=job.get('plan',{}).get('requested_cap'),
                 actual_final_N=summary.get('actual_final_N'),terminal_N=summary.get('terminal_N'),
@@ -102,7 +104,10 @@ def _run_batch(images,input_root,config,output,gpus,retries,popen,jobs_per_gpu,l
                 delta_MS_SSIM_vs_fixed_p2=delta.get('MS_SSIM'),delta_N_vs_fixed_p2=delta.get('N'),
                 metric_profile=summary.get('metric_profile'),
                 terminal_step=summary.get('terminal_step'),selected_checkpoint_step=summary.get('selected_checkpoint_step'),
-                elapsed_seconds=summary.get('elapsed_seconds'),output=job.get('output'),error=job.get('error')))
+                elapsed_seconds=summary.get('elapsed_seconds'),encoding_status=enc.get('status'),
+                encoded_bytes=artifact.get('bytes'),encoded_bpp=artifact.get('bpp'),
+                decoded_RGB8_PSNR=artifact.get('decoded_RGB8_PSNR'),codec_seconds=enc.get('seconds'),
+                output=job.get('output'),error=job.get('error')))
         paired = paired_summary(jobs)
         atomic_json(output/'summary.json',dict(schema='adasplat_batch_summary_v1',jobs=rows,paired_vs_fixed_p2=paired,
             complete=not pending and not running,gpus=gpus,jobs_per_gpu=jobs_per_gpu,
@@ -222,7 +227,10 @@ def _run_batch(images,input_root,config,output,gpus,retries,popen,jobs_per_gpu,l
                     checkpoint = directory/'resume.pt'
                     job['last_resume'] = str(checkpoint) if checkpoint.is_file() else None
                     job['error'] = reason
-                    if len(job['attempts'])<=retries:
+                    encoding_failed = (directory/'encoding.json').is_file() and json.loads((directory/'encoding.json').read_text(encoding='utf-8')).get('status')=='failed'
+                    if encoding_failed:
+                        job['error'] = json.loads((directory/'encoding.json').read_text(encoding='utf-8')).get('error','encoding failed')
+                    if len(job['attempts'])<=retries and not encoding_failed:
                         job['status'] = 'pending'
                         pending.append(job)
                     else:

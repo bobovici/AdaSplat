@@ -58,6 +58,18 @@
           "default": 0.28601604301413147,
           "exclusiveMinimum": 0,
           "maximum": 1
+        },
+        "initial_density": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "default": null
+        },
+        "density_ceiling": {
+          "type": "boolean",
+          "default": false
         }
       },
       "oneOf": [
@@ -424,6 +436,25 @@
           "minimum": 0,
           "maximum": 1,
           "default": 0.1
+        }
+      }
+    },
+    "encoding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "milestones": {
+          "type": "boolean",
+          "default": false
+        },
+        "max_loss_db": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.02
         }
       }
     }

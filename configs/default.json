@@ -4,10 +4,11 @@
   "output": null,
   "total_steps": 50000,
   "capacity": {
-    "mode": "count",
-    "density": null,
-    "count": 200000,
-    "initial_ratio": 0.15
+    "mode": "density",
+    "density": 0.0124339508530685,
+    "count": null,
+    "initial_ratio": 0.15,
+    "density_ceiling": true
   },
   "growth": {
     "enabled": true,
@@ -25,14 +26,7 @@
     "min_fixed_steps": 2000
   },
   "snapshots": {
-    "counts": [
-      40000,
-      50000,
-      70000,
-      100000,
-      150000,
-      200000
-    ],
+    "counts": [],
     "tolerance": 0.1
   },
   "seed": 20261002,

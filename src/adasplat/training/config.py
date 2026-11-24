@@ -14,7 +14,7 @@ REFERENCE_CAP = 114567
 DEFAULTS = {
     'schema': SCHEMA, 'input': None, 'output': None, 'total_steps': 40000,
     'capacity': {'mode': 'density', 'density': REFERENCE_CAP/(4928*3264), 'count': None,
-                 'initial_ratio': 32768/REFERENCE_CAP},
+                 'initial_ratio': 32768/REFERENCE_CAP, 'initial_density': None, 'density_ceiling': False},
     'growth': {'enabled': True, 'fraction': .8, 'events': 16,
                'min_birth_ratio': .02, 'max_birth_ratio': .08},
     'early_stop': {'enabled': True, 'patience': 3, 'min_psnr_gain': .01,
@@ -39,6 +39,7 @@ DEFAULTS = {
                     'adaptive_maturity': True},
         'renderer_sha256': '0000000000000000000000000000000000000000000000000000000000000000'
     },
+    'encoding': {'enabled': False, 'milestones': False, 'max_loss_db': .02},
     'preprocess': {'smoke_crop': False}
 }
 
@@ -74,7 +75,14 @@ def validate(cfg):
             raise ValueError(key+' must be a path string or null')
     number(cfg['total_steps'],'total_steps',2,integer=True)
     number(cfg['seed'],'seed',0,2**32-1,integer=True)
+    enc = cfg['encoding']
+    for key in ('enabled','milestones'):
+        if not isinstance(enc[key],bool): raise ValueError('encoding.'+key+' must be boolean')
+    number(enc['max_loss_db'],'encoding.max_loss_db',0)
     cap = cfg['capacity']
+    if cap['initial_density'] is not None:
+        number(cap['initial_density'],'capacity.initial_density',1e-12)
+    if not isinstance(cap['density_ceiling'],bool): raise ValueError('capacity.density_ceiling must be boolean')
     if cap['mode'] == 'density':
         number(cap['density'],'capacity.density',1e-12)
         if cap['count'] is not None:
@@ -175,7 +183,7 @@ def load_config(path=None, overrides=None, smoke=False):
     merge_strict(cfg,overrides)
     if smoke:
         cfg['total_steps'] = 12
-        cfg['capacity'] = {'mode':'count','density':None,'count':64,'initial_ratio':.5}
+        cfg['capacity'] = {'mode':'count','density':None,'count':64,'initial_ratio':.5,'initial_density':None,'density_ceiling':False}
         cfg['growth'].update(fraction=.75,events=2,min_birth_ratio=.125,max_birth_ratio=.5)
         cfg['early_stop']['enabled'] = False
         cfg['preprocess']['smoke_crop'] = True
@@ -209,9 +217,14 @@ def resolve_plan(cfg, input_path=None):
     pixels = w*h
     cap = cfg['capacity']
     count = rounded(cap['density']*pixels) if cap['mode']=='density' else cap['count']
+    if cap['mode']=='density' and cap['density_ceiling']:
+        count = min(HARD_CAP,max(2,count))
     if not 2 <= count <= HARD_CAP:
         raise ValueError('Resolved capacity must be 2..200000; lower density/count to respect the hard budget')
     initial = min(count,max(2,rounded(cap['initial_ratio']*count))) if cfg['growth']['enabled'] else count
+    if cfg['growth']['enabled'] and cap['initial_density'] is not None:
+        initial = max(2,rounded(cap['initial_density']*pixels))
+        if initial > count: raise ValueError('Initial density exceeds the resolved maximum capacity')
     counts = cfg['snapshots']['counts']
     if counts and counts[-1] > count:
         raise ValueError('Snapshot targets exceed the requested cap; raise --num or lower --save-counts')
@@ -246,6 +259,6 @@ def resolve_plan(cfg, input_path=None):
 
 def recipe_fingerprint(cfg,plan):
     values = copy.deepcopy(cfg)
-    values.pop('input');values.pop('output')
+    values.pop('input');values.pop('output');values.pop('encoding',None)
     dims = {k:plan[k] for k in ('width','height','requested_cap','initial_N','growth_steps')}
     return hashlib.sha256(json.dumps(dict(config=values,plan=dims),sort_keys=True).encode('utf-8')).hexdigest()

@@ -10,9 +10,17 @@ from .config import ROOT, load_config, resolve_plan
 
 
 def common_arguments(parser):
+    parser.add_argument('--preset', choices=['standard','quick','paper'], default='standard',
+                        help='standard: resolution-aware 50k; quick: 2k preview; paper: original 200k/50k recipe')
+    parser.add_argument('--encode', dest='encode', action='store_true', default=None, help='Encode final.pt after completed training and verify decoded RGB8 quality')
+    parser.add_argument('--no-encode', dest='encode', action='store_false', help='Disable post-training encoding')
+    parser.add_argument('--encode-milestones', action='store_true', help='Also encode saved capacity snapshots (implies --encode)')
+    parser.add_argument('--codec-max-loss-db', type=float, help='Maximum decoded RGB8 PSNR loss; default 0.02 dB')
     parser.add_argument('--config',help='JSON config; relative paths inside it use its directory')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--density',type=float,help='Primitives per pixel; cap=round(density*H*W)')
+    group.add_argument('--max-density',type=float,help='Maximum primitives per megapixel (k/MP); default 12.43395, capped at 200k')
+    parser.add_argument('--initial-density',type=float,help='Initial primitives in k/MP; overrides the initial ratio')
     group.add_argument('--num','--count',dest='count',type=int,help='Explicit primitive cap (2..200000)')
     parser.add_argument('--steps','--total-steps',dest='steps',type=int,help='Total main-step schedule budget')
     parser.add_argument('--initial-ratio',type=float,help='Initial fraction of the primitive cap')
@@ -26,16 +34,25 @@ def common_arguments(parser):
 
 
 def cli_config(args,input_path=None,output_path=None):
+    preset = ROOT/'configs'/(args.preset+'.json')
+    config_path = args.config or preset
     updates = {}
     if input_path is not None:
         updates['input'] = str(Path(input_path).expanduser().resolve())
     if output_path is not None:
         updates['output'] = str(Path(output_path).expanduser().resolve())
-    if args.density is not None:
-        updates['capacity'] = dict(mode='density',density=args.density,count=None)
+    if args.max_density is not None:
+        updates['capacity'] = dict(mode='density',density=args.max_density/1000,count=None,density_ceiling=True)
+    elif args.density is not None:
+        updates['capacity'] = dict(mode='density',density=args.density,count=None,density_ceiling=False)
     elif args.count is not None:
         updates['capacity'] = dict(mode='count',count=args.count,density=None)
+    if args.initial_density is not None and args.initial_ratio is not None:
+        raise ValueError('Use initial-density or initial-ratio, not both')
+    if args.initial_density is not None:
+        updates.setdefault('capacity',{})['initial_density'] = args.initial_density/1000
     if args.initial_ratio is not None:
+        updates.setdefault('capacity',{})['initial_density'] = None
         updates.setdefault('capacity',{})['initial_ratio'] = args.initial_ratio
     if args.steps is not None:
         updates['total_steps'] = args.steps
@@ -49,7 +66,13 @@ def cli_config(args,input_path=None,output_path=None):
         updates.setdefault('growth',{})['enabled'] = False
     if args.no_early_stop:
         updates['early_stop'] = dict(enabled=False)
-    return load_config(args.config,updates,smoke=args.smoke)
+    if args.encode is not None:
+        updates.setdefault('encoding',{})['enabled'] = args.encode
+    if args.encode_milestones:
+        updates.setdefault('encoding',{}).update(enabled=True,milestones=True)
+    if args.codec_max_loss_db is not None:
+        updates.setdefault('encoding',{})['max_loss_db'] = args.codec_max_loss_db
+    return load_config(config_path,updates,smoke=args.smoke)
 
 
 def default_output(prefix):
@@ -78,13 +101,22 @@ def single_main(argv=None):
             return 0
         if args.gpu is not None:
             os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+        if cfg['encoding']['enabled']:
+            from .pipeline import check_codec_dependency
+            check_codec_dependency()
         # Delay torch/CUDA imports until GPU visibility has been selected.
         from .trainer import Trainer
         trainer = Trainer(cfg,output,resume=args.resume)
-        trainer.fit(until_step=args.stop_after)
+        result = trainer.fit(until_step=args.stop_after)
+        del trainer
+        if cfg['encoding']['enabled'] and result['complete']:
+            import gc, torch
+            gc.collect(); torch.cuda.empty_cache()
+            from .pipeline import encode_completed_run
+            encode_completed_run(cfg,output,plan['input'])
         print(json.dumps(dict(output=str(output),progress=str(output/'progress.json')),ensure_ascii=False))
         return 0
-    except (ValueError,FileNotFoundError,FileExistsError) as error:
+    except (ValueError,FileNotFoundError,FileExistsError,RuntimeError) as error:
         parser.error(str(error))
 
 
@@ -92,8 +124,8 @@ def batch_main(argv=None):
     parser = argparse.ArgumentParser(description='Enumerate images and schedule the same single-image Trainer on GPU workers.')
     parser.add_argument('--input-dir',required=True)
     parser.add_argument('--output',help='A new batch output directory')
-    parser.add_argument('--gpus',default='0,1',help='Comma-separated physical GPU indices (default: 0,1)')
-    parser.add_argument('--jobs-per-gpu',type=int,default=2,help='Concurrent image workers per GPU (default: 2)')
+    parser.add_argument('--gpus',default='auto',help='auto: all visible CUDA GPUs; or comma-separated physical indices')
+    parser.add_argument('--jobs-per-gpu',type=int,default=1,help='Concurrent image workers per GPU (default: 1)')
     parser.add_argument('--expected-images',type=int,help='Require this image count before launching any worker')
     parser.add_argument('--recursive',action='store_true')
     parser.add_argument('--pattern',action='append',help='Optional glob filter; can be repeated')
@@ -105,7 +137,8 @@ def batch_main(argv=None):
         root = Path(args.input_dir).expanduser().resolve(strict=True)
         if not root.is_dir():
             raise ValueError('input-dir must be a directory')
-        gpus = [int(v.strip()) for v in args.gpus.split(',')]
+        from .devices import resolve_gpus
+        gpus = resolve_gpus(args.gpus)
         if not gpus or len(set(gpus))!=len(gpus) or min(gpus)<0:
             raise ValueError('gpus must contain unique nonnegative indices')
         if args.jobs_per_gpu<1:
@@ -130,5 +163,5 @@ def batch_main(argv=None):
                 max_parallel_jobs=len(gpus)*args.jobs_per_gpu,output=str(output)),ensure_ascii=False,indent=2))
             return 1 if any('error' in r for r in rows) else 0
         return run_batch(images,root,cfg,output,gpus,args.retries,jobs_per_gpu=args.jobs_per_gpu)
-    except (ValueError,FileNotFoundError,FileExistsError) as error:
+    except (ValueError,FileNotFoundError,FileExistsError,RuntimeError) as error:
         parser.error(str(error))

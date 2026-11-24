@@ -1,0 +1,84 @@
+{
+  "schema": "adasplat_training_v1",
+  "input": null,
+  "output": null,
+  "total_steps": 2000,
+  "capacity": {
+    "mode": "density",
+    "density": 0.00124339508530685,
+    "count": null,
+    "initial_ratio": 0.15,
+    "density_ceiling": true
+  },
+  "growth": {
+    "enabled": true,
+    "fraction": 0.8,
+    "events": 16,
+    "min_birth_ratio": 0.02,
+    "max_birth_ratio": 0.08
+  },
+  "early_stop": {
+    "enabled": false,
+    "patience": 3,
+    "min_psnr_gain": 0.01,
+    "min_ssim_gain": 0.0005,
+    "eval_interval": 500,
+    "min_fixed_steps": 2000
+  },
+  "snapshots": {
+    "counts": [],
+    "tolerance": 0.1
+  },
+  "seed": 20261002,
+  "advanced": {
+    "mse_fraction": 0.1,
+    "ssim_ramp_fraction": 0.1,
+    "ssim_weight": 0.035,
+    "ssim_interval": 8,
+    "evaluate_every": 1000,
+    "initial_cg": 64,
+    "new_color_cg": 16,
+    "warm_min": 64,
+    "warm_max": 192,
+    "joint_steps": 256,
+    "threads": 2,
+    "ssim_tile": 1024,
+    "dark_leak_weight": 0.5,
+    "dark_threshold": 0.05,
+    "dark_margin": 0.04,
+    "dark_grid": 4,
+    "regularizer_weight": 0.01,
+    "growth_reference": "pre_birth",
+    "checkpoint_selection": "within_cap",
+    "optimizer": {
+      "rates": {
+        "xys": 0.03,
+        "scale_raw": 0.01,
+        "rotation_angle": 0.003,
+        "colors": 0.025,
+        "p": 0.003
+      },
+      "betas": [
+        0.98,
+        0.92,
+        0.99
+      ],
+      "eps": 1e-08
+    },
+    "options": {
+      "moment_correction": false,
+      "pixel_samples": 1,
+      "affine_color": false,
+      "structure_birth": false,
+      "shape_competition": true,
+      "tangent_novelty": false,
+      "sensitivity_trust": false,
+      "split_merge": false,
+      "adaptive_maturity": true
+    },
+    "renderer_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "preprocess": {
+    "smoke_crop": false
+  }
+}
