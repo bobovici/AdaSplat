@@ -3,6 +3,22 @@
 Content-adaptive image representation with learnable generalized lp primitives,
 validated population growth, and optional complete-stream compression.
 
+## Implementation and upstream attribution
+
+This repository contains the AdaSplat implementation together with reused and
+adapted upstream components. AdaSplat-specific development includes the generalized
+lp primitive parameterization and its scale/response calibration, validated
+population adaptation, training integration, and the complete-stream codec
+adaptations. These components build on existing image-splatting, rendering,
+optimization, and coding implementations; they are not all written from scratch.
+
+The root [LICENSE](LICENSE) preserves the copyright and license notice inherited
+from GaussianImage. That upstream attribution does **not** mean that the upstream
+author wrote this entire repository or implemented the AdaSplat-specific method.
+Reused components, including gsplat/GLM, the optimizer, and upstream coding
+helpers, retain their own notices. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+and the notices in the corresponding source files for their attribution.
+
 ## Quick start
 
 Requires an NVIDIA GPU, CUDA Toolkit 11.8, a compatible C++ compiler, and Python 3.8--3.11.
